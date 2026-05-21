@@ -19,7 +19,11 @@ export default function Home() {
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
-
+const handleUpgrade = async () => {
+  const res = await fetch("/api/create-checkout", { method: "POST" });
+  const data = await res.json();
+  if (data.url) window.location.href = data.url;
+};
   const handleSubmit = async () => {
     if (!form.productName.trim()) {
       setError("Please enter a product name.");
@@ -180,8 +184,7 @@ export default function Home() {
             <div className="upgrade-card">
               <h3>You've used all your free generations</h3>
               <p>Upgrade to unlimited for $12/month — less than a coffee a week.</p>
-              <button className="upgrade-btn">Upgrade Now — $12/mo</button>
-            </div>
+               <button className="upgrade-btn" onClick={handleUpgrade}>Upgrade Now — $12/mo</button>           </div>
           </section>
         )}
 
