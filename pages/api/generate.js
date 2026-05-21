@@ -1,5 +1,10 @@
+import { getAuth, clerkClient } from "@clerk/nextjs/server";
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
+
+  const { userId } = getAuth(req);
+  if (!userId) return res.status(401).json({ error: "Not signed in" });
 
   const { productName, materials, style, keywords, targetBuyer } = req.body;
 
