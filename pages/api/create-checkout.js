@@ -9,7 +9,7 @@ export default async function handler(req, res) {
       mode: "subscription",
       line_items: [
         {
-          price: process.env.STRIPE_PRICE_ID,
+         price: "price_1TZZr4FR8sDiIW9dfrxnCwrQ", 
           quantity: 1,
         },
       ],
