@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import Head from "next/head";
+import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 
 export default function Home() {
+  const { isSignedIn } = useUser();
   const [form, setForm] = useState({
     productName: "",
     materials: "",
@@ -36,6 +38,10 @@ export default function Home() {
   };
 
   const handleSubmit = async () => {
+    if (!isSignedIn) {
+      setError("Please sign in to generate descriptions.");
+      return;
+    }
     if (!form.productName.trim()) {
       setError("Please enter a product name.");
       return;
@@ -85,8 +91,17 @@ export default function Home() {
       <div className="page">
         <header className="header">
           <div className="logo">✦ Listify Shop</div>
-          <div className="usage-badge">
-            {Math.max(0, FREE_LIMIT - usageCount)} free {FREE_LIMIT - usageCount === 1 ? "generation" : "generations"} left
+          <div className="header-right">
+            <SignedOut>
+              <SignInButton mode="modal"><button className="auth-btn">Sign In</button></SignInButton>
+              <SignUpButton mode="modal"><button className="auth-btn primary">Sign Up</button></SignUpButton>
+            </SignedOut>
+            <SignedIn>
+              <div className="usage-badge">
+                {Math.max(0, FREE_LIMIT - usageCount)} free {FREE_LIMIT - usageCount === 1 ? "generation" : "generations"} left
+              </div>
+              <UserButton />
+            </SignedIn>
           </div>
         </header>
 
@@ -153,15 +168,22 @@ export default function Home() {
 
             {error && <p className="error">{error}</p>}
 
-            <button className="generate-btn" onClick={handleSubmit} disabled={loading}>
-              {loading ? (
-                <span className="loading-inner">
-                  <span className="spinner" /> Generating...
-                </span>
-              ) : (
-                "✦ Generate Descriptions"
-              )}
-            </button>
+            <SignedIn>
+              <button className="generate-btn" onClick={handleSubmit} disabled={loading}>
+                {loading ? (
+                  <span className="loading-inner">
+                    <span className="spinner" /> Generating...
+                  </span>
+                ) : (
+                  "✦ Generate Descriptions"
+                )}
+              </button>
+            </SignedIn>
+            <SignedOut>
+              <SignUpButton mode="modal">
+                <button className="generate-btn">✦ Sign Up to Generate</button>
+              </SignUpButton>
+            </SignedOut>
           </div>
         </section>
 
@@ -216,6 +238,11 @@ export default function Home() {
         .page { max-width: 860px; margin: 0 auto; padding: 0 24px 80px; }
         .header { display: flex; justify-content: space-between; align-items: center; padding: 28px 0 0; }
         .logo { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 700; color: #e8c07d; letter-spacing: 0.02em; }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+        .auth-btn { background: transparent; border: 1px solid #3a3020; color: #b8a07a; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 600; padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .auth-btn:hover { border-color: #e8c07d; color: #e8c07d; }
+        .auth-btn.primary { background: #e8c07d; color: #0e0c0a; border-color: #e8c07d; }
+        .auth-btn.primary:hover { background: #f0cc8a; }
         .usage-badge { background: #1e1a14; border: 1px solid #3a3020; color: #b8a07a; font-size: 0.8rem; font-weight: 500; padding: 6px 14px; border-radius: 100px; }
         .hero { padding: 72px 0 48px; text-align: center; }
         .hero-tag { display: inline-block; background: #1e1a14; border: 1px solid #e8c07d44; color: #e8c07d; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 16px; border-radius: 100px; margin-bottom: 28px; }
