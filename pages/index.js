@@ -3,7 +3,9 @@ import Head from "next/head";
 import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 
 export default function Home() {
-  const { isSignedIn } = useUser();
+  const { isSignedIn, user } = useUser();
+  const isPro = user?.publicMetadata?.isPro === true;
+
   const [form, setForm] = useState({
     productName: "",
     materials: "",
@@ -19,9 +21,12 @@ export default function Home() {
   const FREE_LIMIT = 5;
 
   useEffect(() => {
-    const saved = parseInt(localStorage.getItem("usageCount") || "0");
-    setUsageCount(saved);
-  }, []);
+    if (user) {
+      const key = `usageCount_${user.id}`;
+      const saved = parseInt(localStorage.getItem(key) || "0");
+      setUsageCount(saved);
+    }
+  }, [user]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -46,7 +51,7 @@ export default function Home() {
       setError("Please enter a product name.");
       return;
     }
-    if (usageCount >= FREE_LIMIT) {
+    if (!isPro && usageCount >= FREE_LIMIT) {
       setError("You've used all 5 free generations. Upgrade to continue.");
       return;
     }
@@ -62,9 +67,11 @@ export default function Home() {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setDescriptions(data.descriptions);
-      const next = usageCount + 1;
-      setUsageCount(next);
-      localStorage.setItem("usageCount", next);
+      if (!isPro) {
+        const next = usageCount + 1;
+        setUsageCount(next);
+        localStorage.setItem(`usageCount_${user.id}`, next);
+      }
     } catch (err) {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -97,9 +104,13 @@ export default function Home() {
               <SignUpButton mode="modal"><button className="auth-btn primary">Sign Up</button></SignUpButton>
             </SignedOut>
             <SignedIn>
-              <div className="usage-badge">
-                {Math.max(0, FREE_LIMIT - usageCount)} free {FREE_LIMIT - usageCount === 1 ? "generation" : "generations"} left
-              </div>
+              {isPro ? (
+                <div className="pro-badge">✦ Pro</div>
+              ) : (
+                <div className="usage-badge">
+                  {Math.max(0, FREE_LIMIT - usageCount)} free {FREE_LIMIT - usageCount === 1 ? "generation" : "generations"} left
+                </div>
+              )}
               <UserButton />
             </SignedIn>
           </div>
@@ -121,48 +132,23 @@ export default function Home() {
             <div className="form-grid">
               <div className="field full">
                 <label>Product Name <span className="req">*</span></label>
-                <input
-                  name="productName"
-                  placeholder="e.g. Hand-poured lavender soy candle"
-                  value={form.productName}
-                  onChange={handleChange}
-                />
+                <input name="productName" placeholder="e.g. Hand-poured lavender soy candle" value={form.productName} onChange={handleChange} />
               </div>
               <div className="field">
                 <label>Materials</label>
-                <input
-                  name="materials"
-                  placeholder="e.g. soy wax, cotton wick, essential oils"
-                  value={form.materials}
-                  onChange={handleChange}
-                />
+                <input name="materials" placeholder="e.g. soy wax, cotton wick, essential oils" value={form.materials} onChange={handleChange} />
               </div>
               <div className="field">
                 <label>Style / Aesthetic</label>
-                <input
-                  name="style"
-                  placeholder="e.g. minimalist, boho, cottagecore"
-                  value={form.style}
-                  onChange={handleChange}
-                />
+                <input name="style" placeholder="e.g. minimalist, boho, cottagecore" value={form.style} onChange={handleChange} />
               </div>
               <div className="field">
                 <label>SEO Keywords</label>
-                <input
-                  name="keywords"
-                  placeholder="e.g. gift for her, home decor, relaxation"
-                  value={form.keywords}
-                  onChange={handleChange}
-                />
+                <input name="keywords" placeholder="e.g. gift for her, home decor, relaxation" value={form.keywords} onChange={handleChange} />
               </div>
               <div className="field">
                 <label>Target Buyer</label>
-                <input
-                  name="targetBuyer"
-                  placeholder="e.g. new moms, college students, dog lovers"
-                  value={form.targetBuyer}
-                  onChange={handleChange}
-                />
+                <input name="targetBuyer" placeholder="e.g. new moms, college students, dog lovers" value={form.targetBuyer} onChange={handleChange} />
               </div>
             </div>
 
@@ -171,9 +157,7 @@ export default function Home() {
             <SignedIn>
               <button className="generate-btn" onClick={handleSubmit} disabled={loading}>
                 {loading ? (
-                  <span className="loading-inner">
-                    <span className="spinner" /> Generating...
-                  </span>
+                  <span className="loading-inner"><span className="spinner" /> Generating...</span>
                 ) : (
                   "✦ Generate Descriptions"
                 )}
@@ -195,10 +179,7 @@ export default function Home() {
                 <div className="desc-card" key={i}>
                   <div className="desc-header">
                     <span className="desc-label">Option {i + 1}</span>
-                    <button
-                      className={`copy-btn ${copied === i ? "copied" : ""}`}
-                      onClick={() => handleCopy(desc, i)}
-                    >
+                    <button className={`copy-btn ${copied === i ? "copied" : ""}`} onClick={() => handleCopy(desc, i)}>
                       {copied === i ? "✓ Copied!" : "Copy"}
                     </button>
                   </div>
@@ -209,7 +190,7 @@ export default function Home() {
           </section>
         )}
 
-        {usageCount >= FREE_LIMIT && (
+        {!isPro && usageCount >= FREE_LIMIT && (
           <section className="upgrade">
             <div className="upgrade-card">
               <h3>You've used all your free generations</h3>
@@ -226,12 +207,7 @@ export default function Home() {
 
       <style jsx global>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-          background: #0e0c0a;
-          color: #f0ebe3;
-          font-family: 'DM Sans', sans-serif;
-          min-height: 100vh;
-        }
+        body { background: #0e0c0a; color: #f0ebe3; font-family: 'DM Sans', sans-serif; min-height: 100vh; }
       `}</style>
 
       <style jsx>{`
@@ -244,6 +220,7 @@ export default function Home() {
         .auth-btn.primary { background: #e8c07d; color: #0e0c0a; border-color: #e8c07d; }
         .auth-btn.primary:hover { background: #f0cc8a; }
         .usage-badge { background: #1e1a14; border: 1px solid #3a3020; color: #b8a07a; font-size: 0.8rem; font-weight: 500; padding: 6px 14px; border-radius: 100px; }
+        .pro-badge { background: linear-gradient(135deg, #e8c07d, #f0cc8a); color: #0e0c0a; font-size: 0.8rem; font-weight: 700; padding: 6px 14px; border-radius: 100px; letter-spacing: 0.05em; }
         .hero { padding: 72px 0 48px; text-align: center; }
         .hero-tag { display: inline-block; background: #1e1a14; border: 1px solid #e8c07d44; color: #e8c07d; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; padding: 6px 16px; border-radius: 100px; margin-bottom: 28px; }
         .hero-title { font-family: 'Playfair Display', serif; font-size: clamp(2.4rem, 6vw, 4rem); font-weight: 900; line-height: 1.1; color: #f0ebe3; margin-bottom: 20px; }
